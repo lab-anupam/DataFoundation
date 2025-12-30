@@ -1,0 +1,316 @@
+===========================================================
+SQL: JOINS & WINDOW FUNCTIONS
+===========================================================
+
+Author: Anupam Bhattacharyya
+Focus Area: Data Foundations – SQL
+Goal: Master table joins and analytical window functions
+for real-world analytics and interview readiness.
+
+===========================================================
+BIG PICTURE
+===========================================================
+
+SQL is used to:
+1. Combine data from multiple tables (JOINS)
+2. Analyze data without losing row-level detail (WINDOW FUNCTIONS)
+
+Key difference:
+- JOIN → combine tables
+- GROUP BY → aggregate (reduces rows)
+- WINDOW FUNCTION → analyze while keeping rows
+
+===========================================================
+PART 1: SQL JOINS
+===========================================================
+
+A JOIN combines rows from two tables using a common key.
+
+Example tables:
+
+orders
+--------------------------------
+order_id | customer_id | amount
+--------------------------------
+1        | 101         | 250
+2        | 102         | 300
+3        | 103         | 150
+
+customers
+------------------------
+customer_id | name
+------------------------
+101         | Alice
+102         | Bob
+104         | David
+
+-----------------------------------------------------------
+1. INNER JOIN
+-----------------------------------------------------------
+
+Definition:
+Returns only rows that have matching keys in BOTH tables.
+
+SQL:
+SELECT *
+FROM orders o
+INNER JOIN customers c
+ON o.customer_id = c.customer_id;
+
+Result:
+- Orders with customer_id 101 and 102
+- Order with customer_id 103 is removed
+
+Use when:
+- Only complete, matching data matters
+
+-----------------------------------------------------------
+2. LEFT JOIN (MOST IMPORTANT)
+-----------------------------------------------------------
+
+Definition:
+Keeps ALL rows from the LEFT table.
+Adds matching rows from the RIGHT table.
+If no match → NULL values.
+
+SQL:
+SELECT *
+FROM orders o
+LEFT JOIN customers c
+ON o.customer_id = c.customer_id;
+
+Result:
+- All orders are kept
+- Missing customer data appears as NULL
+
+Golden rule:
+NEVER lose your fact table (transactions).
+
+-----------------------------------------------------------
+3. RIGHT JOIN
+-----------------------------------------------------------
+
+Definition:
+Keeps ALL rows from the RIGHT table.
+
+SQL:
+SELECT *
+FROM orders o
+RIGHT JOIN customers c
+ON o.customer_id = c.customer_id;
+
+Note:
+Rarely used in practice.
+LEFT JOIN is preferred for readability.
+
+-----------------------------------------------------------
+4. FULL OUTER JOIN
+-----------------------------------------------------------
+
+Definition:
+Keeps ALL rows from BOTH tables.
+Unmatched rows get NULLs.
+
+SQL:
+SELECT *
+FROM orders o
+FULL OUTER JOIN customers c
+ON o.customer_id = c.customer_id;
+
+Use cases:
+- Data reconciliation
+- Audits
+- Data completeness checks
+
+-----------------------------------------------------------
+JOIN SUMMARY TABLE
+-----------------------------------------------------------
+
+INNER JOIN  → only matching rows
+LEFT JOIN   → all left + matches
+RIGHT JOIN  → all right + matches
+FULL JOIN   → everything
+
+===========================================================
+PART 2: WINDOW FUNCTIONS
+===========================================================
+
+Window functions perform calculations across related rows
+WITHOUT collapsing rows like GROUP BY.
+
+Syntax pattern:
+FUNCTION() OVER (PARTITION BY ... ORDER BY ...)
+
+-----------------------------------------------------------
+GROUP BY vs WINDOW FUNCTION
+-----------------------------------------------------------
+
+GROUP BY:
+- Reduces rows
+- Used for aggregation summaries
+
+WINDOW FUNCTION:
+- Keeps original rows
+- Adds analytical insight per row
+
+-----------------------------------------------------------
+1. ROW_NUMBER()
+-----------------------------------------------------------
+
+Purpose:
+Assigns a unique sequential number to rows within a group.
+
+SQL:
+SELECT *,
+       ROW_NUMBER() OVER (
+           PARTITION BY customer_id
+           ORDER BY amount DESC
+       ) AS rn
+FROM orders;
+
+Use cases:
+- Deduplication
+- Top-N per group
+- Latest record selection
+
+Deduplication example:
+SELECT *
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY order_id
+               ORDER BY updated_at DESC
+           ) AS rn
+    FROM orders
+) t
+WHERE rn = 1;
+
+-----------------------------------------------------------
+2. RANK() vs DENSE_RANK()
+-----------------------------------------------------------
+
+RANK:
+- Assigns same rank to ties
+- Skips next rank (creates gaps)
+
+DENSE_RANK:
+- Assigns same rank to ties
+- No gaps in ranking
+
+SQL:
+SELECT amount,
+       RANK() OVER (ORDER BY amount DESC) AS rnk,
+       DENSE_RANK() OVER (ORDER BY amount DESC) AS drnk
+FROM orders;
+
+Use:
+- DENSE_RANK → leaderboards
+- RANK → competition-style ranking
+
+-----------------------------------------------------------
+3. LAG()
+-----------------------------------------------------------
+
+Purpose:
+Accesses the PREVIOUS row’s value.
+
+SQL:
+SELECT order_date,
+       amount,
+       LAG(amount) OVER (ORDER BY order_date) AS prev_amount
+FROM orders;
+
+Use cases:
+- Day-over-day comparison
+- Growth calculation
+- Trend analysis
+
+Difference calculation:
+amount - LAG(amount) OVER (ORDER BY order_date)
+
+-----------------------------------------------------------
+4. LEAD()
+-----------------------------------------------------------
+
+Purpose:
+Accesses the NEXT row’s value.
+
+SQL:
+SELECT order_date,
+       amount,
+       LEAD(amount) OVER (ORDER BY order_date) AS next_amount
+FROM orders;
+
+Use cases:
+- Future comparisons
+- Churn analysis
+- Event transitions
+
+-----------------------------------------------------------
+PART 3: REAL-WORLD ANALYTICAL PATTERNS
+-----------------------------------------------------------
+
+Running total:
+SUM(amount) OVER (
+    PARTITION BY customer_id
+    ORDER BY order_date
+) AS running_total
+
+Top 3 records per group:
+SELECT *
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY customer_id
+               ORDER BY amount DESC
+           ) AS rn
+    FROM orders
+) t
+WHERE rn <= 3;
+
+Duplicate detection:
+SELECT *
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY order_id
+               ORDER BY updated_at DESC
+           ) AS rn
+    FROM orders
+) t
+WHERE rn > 1;
+
+-----------------------------------------------------------
+COMMON MISTAKES (INTERVIEW TRAPS)
+-----------------------------------------------------------
+
+- Using GROUP BY when window function is required
+- Forgetting PARTITION BY
+- Incorrect ORDER BY inside OVER()
+- Confusing RANK with DENSE_RANK
+- Accidentally filtering rows before window functions
+
+-----------------------------------------------------------
+INTERVIEW-READY ONE-LINERS
+-----------------------------------------------------------
+
+LEFT JOIN:
+"Keeps all rows from the left table and adds matching rows from the right."
+
+Window Function:
+"Performs calculations across related rows without reducing row count."
+
+ROW_NUMBER:
+"Used for deduplication and top-N analysis."
+
+LAG / LEAD:
+"Used for trend analysis and time-based comparisons."
+
+-----------------------------------------------------------
+ONE-LINE MEMORY HOOK
+-----------------------------------------------------------
+
+JOIN combines data.
+WINDOW functions analyze data.
+
+
