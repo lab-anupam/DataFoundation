@@ -1,7 +1,7 @@
 """
 ===========================================================
 EDA PIPELINE PROJECT
-Week 2 – Day 7 | Data Foundations
+
 
 Author: Anupam Bhattacharyya
 
